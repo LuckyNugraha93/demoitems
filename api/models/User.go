@@ -92,7 +92,7 @@ func (u *User) FindAllUsers(db *gorm.DB) (*[]User, error) {
 	return &users, err
 }
 
-func (u *User) FindUserByID(db *gorm.DB, uid i) (*User, error) {
+func (u *User) FindUserByID(db *gorm.DB, uid uint32) (*User, error) {
 	var err error
 	err = db.Debug().Model(User{}).Where("id = ?", uid).Take(&u).Error
 	if err != nil {
@@ -114,8 +114,7 @@ func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
 		map[string]interface{}{
 			"password":  u.Password,
-			"nickname":  u.Nickname,
-			"email":     u.Email,
+			"username":  u.Username,
 			"update_at": time.Now(),
 		},
 	)

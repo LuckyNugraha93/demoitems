@@ -28,7 +28,7 @@ func (server *Server) CreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	item.Prepare()
-	err = item.Validate("")
+	err = item.Validate()
 	if err != nil {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
 		return
@@ -51,6 +51,7 @@ func (server *Server) GetItems(w http.ResponseWriter, r *http.Request) {
 	item := models.Item{}
 
 	items, err := item.FindAllItems(server.DB)
+	fmt.Println("route controller get items");
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return
@@ -67,7 +68,7 @@ func (server *Server) GetItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	item := models.Item{}
-	itemGotten, err := item.FindItemByID(server.DB, uint32(uid))
+	itemGotten, err := item.FindItemByID(server.DB, uint64(uid))
 	if err != nil {
 		responses.ERROR(w, http.StatusBadRequest, err)
 		return
@@ -79,7 +80,8 @@ func (server *Server) UpdateItem(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	uid, err := strconv.ParseUint(vars["id"], 10, 32)
-	if err != nil {
+	fmt.Printf("%d", uid)
+	if err != nil && uid !=0 {
 		responses.ERROR(w, http.StatusBadRequest, err)
 		return
 	}
@@ -95,21 +97,17 @@ func (server *Server) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tokenID, err := auth.ExtractTokenID(r)
-	if err != nil {
+	if err != nil && tokenID != 0{
 		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return
 	}
-	if tokenID != uint32(uid) {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
-		return
-	}
 	item.Prepare()
-	err = item.Validate("update")
+	err = item.Validate()
 	if err != nil {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
 		return
 	}
-	updatedItem, err := item.UpdateAnItem(server.DB, uint32(uid))
+	updatedItem, err := item.UpdateAnItem(server.DB, uid)
 	if err != nil {
 		formattedError := formaterror.FormatError(err.Error())
 		responses.ERROR(w, http.StatusInternalServerError, formattedError)
@@ -130,15 +128,11 @@ func (server *Server) DeleteItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tokenID, err := auth.ExtractTokenID(r)
-	if err != nil {
+	if err != nil && tokenID != 0 {
 		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return
 	}
-	if tokenID != 0 && tokenID != uint32(uid) {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
-		return
-	}
-	deletedItem, err = item.DeleteAnItem(server.DB, uint32(uid))
+	deletedItem, err := item.DeleteAnItem(server.DB, uint64(uid))
 	if err != nil {
 		formattedError := formaterror.FormatError(err.Error())
 		responses.ERROR(w, http.StatusInternalServerError, formattedError)

@@ -36,17 +36,8 @@ func (server *Server) CreateTransaction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	for i, _ := range transaction.TransactionDetails {
-		transaction.TransactionDetails[i].Prepare()
-		err = transaction.TransactionDetails[i].Validate()
-		if err != nil {
-			responses.ERROR(w, http.StatusUnprocessableEntity, err)
-			return
-		}
-	}
-
 	uid, err := auth.ExtractTokenID(r)
-	if err != nil {
+	if err != nil && uid != 0 {
 		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return
 	}
@@ -56,6 +47,12 @@ func (server *Server) CreateTransaction(w http.ResponseWriter, r *http.Request) 
 		responses.ERROR(w, http.StatusInternalServerError, formattedError)
 		return
 	}
+	if err != nil {
+		formattedError := formaterror.FormatError(err.Error())
+		responses.ERROR(w, http.StatusInternalServerError, formattedError)
+		return
+	}
+
 	w.Header().Set("Lacation", fmt.Sprintf("%s%s/%d", r.Host, r.URL.Path, transactionCreated.ID))
 	responses.JSON(w, http.StatusCreated, transactionCreated)
 }
@@ -103,7 +100,7 @@ func (server *Server) UpdateTransaction(w http.ResponseWriter, r *http.Request) 
 
 	//CHeck if the auth token is valid and  get the user id from it
 	uid, err := auth.ExtractTokenID(r)
-	if err != nil {
+	if err != nil && uid != 0 {
 		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return
 	}
@@ -172,7 +169,7 @@ func (server *Server) DeleteTransaction(w http.ResponseWriter, r *http.Request) 
 
 	// Is this user authenticated?
 	uid, err := auth.ExtractTokenID(r)
-	if err != nil {
+	if err != nil && uid != 0{
 		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return
 	}
@@ -185,12 +182,12 @@ func (server *Server) DeleteTransaction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	transactionUpdated, err := transactionUpdate.DeleteATransaction(server.DB)
+	deletedTransaction, err := transaction.DeleteATransaction(server.DB, pid)
 
 	if err != nil {
 		formattedError := formaterror.FormatError(err.Error())
 		responses.ERROR(w, http.StatusInternalServerError, formattedError)
 		return
 	}
-	responses.JSON(w, http.StatusOK, transactionUpdated)
+	responses.JSON(w, http.StatusOK, deletedTransaction)
 }
